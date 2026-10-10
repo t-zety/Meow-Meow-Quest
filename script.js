@@ -700,3 +700,133 @@
 
   requestAnimationFrame(loop);
 })();
+
+/* 🐱 MEOW-MEOW QUEST: CUTE SOUND EFFECTS */
+(() => {
+  let audio = null;
+  let soundReady = false;
+  let lastStars = "";
+
+  function startAudio() {
+    if (!audio) {
+      const AudioContext =
+        window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      audio = new AudioContext();
+    }
+
+    audio.resume();
+    soundReady = true;
+  }
+
+  function beep(startFreq, endFreq, duration, type = "sine", volume = 0.08) {
+    if (!audio || !soundReady) return;
+
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const now = audio.currentTime;
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(startFreq, now);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(1, endFreq),
+      now + duration
+    );
+
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  }
+
+  function jumpSound() {
+    beep(280, 650, 0.16, "triangle", 0.09);
+  }
+
+  function starSound() {
+    beep(880, 1320, 0.12, "sine", 0.07);
+    setTimeout(() => beep(1320, 1760, 0.15, "sine", 0.06), 90);
+  }
+
+  function meowSound() {
+    beep(650, 430, 0.13, "triangle", 0.07);
+    setTimeout(() => beep(480, 720, 0.18, "triangle", 0.06), 120);
+  }
+
+  function victorySound() {
+    [523, 659, 784, 1047].forEach((frequency, index) => {
+      setTimeout(() => {
+        beep(frequency, frequency * 1.15, 0.2, "sine", 0.07);
+      }, index * 140);
+    });
+  }
+
+  // Start audio after the player taps the game.
+  document.getElementById("start")?.addEventListener("click", startAudio);
+
+  // Cute jump sound for the on-screen jump button.
+  document.getElementById("jump")?.addEventListener("click", () => {
+    startAudio();
+    jumpSound();
+  });
+
+  // Keyboard jump sound.
+  document.addEventListener("keydown", event => {
+    if (
+      ["Space", "ArrowUp", "KeyW"].includes(event.code) &&
+      !event.repeat
+    ) {
+      startAudio();
+      jumpSound();
+    }
+  });
+
+  // Play a sparkle when the star counter changes.
+  const starLabel = document.getElementById("starLabel");
+
+  if (starLabel) {
+    lastStars = starLabel.textContent;
+
+    new MutationObserver(() => {
+      const currentStars = starLabel.textContent;
+
+      if (currentStars !== lastStars) {
+        if (soundReady) starSound();
+        lastStars = currentStars;
+      }
+    }).observe(starLabel, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  }
+
+  // Play a victory tune when the level number changes.
+  const levelLabel = document.getElementById("levelLabel");
+
+  if (levelLabel) {
+    let previousLevel = levelLabel.textContent;
+
+    new MutationObserver(() => {
+      const currentLevel = levelLabel.textContent;
+
+      if (currentLevel !== previousLevel) {
+        if (soundReady) victorySound();
+        previousLevel = currentLevel;
+      }
+    }).observe(levelLabel, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  }
+
+  // Tap the cat selection area to hear a little meow.
+  document.getElementById("catgrid")?.addEventListener("click", () => {
+    startAudio();
+    meowSound();
+  });
+})();
